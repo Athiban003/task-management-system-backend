@@ -33,8 +33,28 @@ public class Project {
     private LocalDateTime updatedAt;
 
     @ManyToOne(fetch=FetchType.LAZY)
-    @JoinColumn(name = "created_by",nullable = false)
+    @JoinColumn(name = "created_by",nullable = false,updatable = false)
     private User createdBy;
+
+
+    @PrePersist
+    protected void onCreate(){
+        createdAt=LocalDateTime.now();
+        updatedAt=LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected  void onUpdate(){
+        updatedAt=LocalDateTime.now();
+    }
+
+    protected Project(){
+//
+    }
+
+    public Project(User createdBy){
+        this.createdBy=createdBy;
+    }
 
     public Long getId() {
         return id;
@@ -43,6 +63,7 @@ public class Project {
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -50,6 +71,7 @@ public class Project {
     public String getDescription() {
         return description;
     }
+
     public void setDescription(String description) {
         this.description = description;
     }
@@ -57,6 +79,7 @@ public class Project {
     public LocalDate getDeadline() {
         return deadline;
     }
+    
     public void setDeadline(LocalDate deadline) {
         this.deadline = deadline;
     }
