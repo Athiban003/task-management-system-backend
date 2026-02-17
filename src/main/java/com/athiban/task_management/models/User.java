@@ -1,6 +1,7 @@
 package com.athiban.task_management.models;
 
 import jakarta.persistence.*;
+import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
 @Table(name = "users")
@@ -11,4 +12,16 @@ public class User {
 
     @Column(nullable = false)
     private String name;
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 }

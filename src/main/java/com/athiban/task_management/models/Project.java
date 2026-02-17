@@ -1,10 +1,13 @@
 
 package com.athiban.task_management.models;
 
+import com.athiban.task_management.exception.InvalidProjectStateException;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "projects")
@@ -36,6 +39,19 @@ public class Project {
     @JoinColumn(name = "created_by",nullable = false,updatable = false)
     private User createdBy;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
+    protected Project() {}
+
+    public Project(User creator, String name, String description, LocalDate deadline) {
+        this.createdBy = creator;
+        this.name = name;
+        this.description = description;
+        this.deadline = deadline;
+        this.status = ProjectStatus.ACTIVE;
+    }
 
     @PrePersist
     protected void onCreate(){
@@ -48,12 +64,46 @@ public class Project {
         updatedAt=LocalDateTime.now();
     }
 
-    protected Project(){
-//
+    public List<String> updateDetails(String name, String description, LocalDate deadline){
+
+        if(this.status==ProjectStatus.ARCHIVED || this.status== ProjectStatus.COMPLETED){
+            throw new InvalidProjectStateException("Cannot modify completed/archived project");
+        }
+
+        List<String> changes = new ArrayList<>();
+        if (!this.name.equals(name)) {
+            changes.add("name: " + this.name + " → " + name);
+            this.name = name;
+        }
+
+        if (!this.description.equals(description)) {
+            changes.add("description changed");
+            this.description = description;
+        }
+
+        if (!this.deadline.equals(deadline)) {
+            changes.add("deadline: " + this.deadline + " → " + deadline);
+            this.deadline = deadline;
+        }
+        return changes;
     }
 
-    public Project(User createdBy){
-        this.createdBy=createdBy;
+    public boolean changeStatus(ProjectStatus newStatus) {
+
+        if(this.status==newStatus){
+            return false;
+        }
+
+        if (this.status == ProjectStatus.ARCHIVED) {
+            throw new InvalidProjectStateException("Archived project cannot change status");
+        }
+
+        if (this.status == ProjectStatus.COMPLETED && newStatus !=ProjectStatus.ARCHIVED) {
+            throw new InvalidProjectStateException("Completed project can only be archived");
+        }
+
+        this.status = newStatus;
+        return true;
     }
 
     public Long getId() {
@@ -64,58 +114,17 @@ public class Project {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public LocalDate getDeadline() {
         return deadline;
     }
-    
-    public void setDeadline(LocalDate deadline) {
-        this.deadline = deadline;
-    }
 
     public ProjectStatus getStatus() {
         return status;
     }
-
-    public void activate() {
-        if (this.status == ProjectStatus.ARCHIVED) {
-            throw new IllegalStateException("Archived project cannot be activated");
-        }
-        this.status = ProjectStatus.ACTIVE;
-    }
-
-    public void putOnHold() {
-        if (this.status == ProjectStatus.COMPLETED) {
-            throw new IllegalStateException("Completed project cannot be put on hold");
-        }
-        if (this.status == ProjectStatus.ARCHIVED) {
-            throw new IllegalStateException("Archived project cannot be put on hold");
-        }
-        this.status = ProjectStatus.ON_HOLD;
-    }
-
-    public void complete() {
-        if (this.status == ProjectStatus.ARCHIVED) {
-            throw new IllegalStateException("Archived project cannot be completed");
-        }
-        this.status = ProjectStatus.COMPLETED;
-    }
-
-    public void archive() {
-        this.status = ProjectStatus.ARCHIVED;
-    }
-
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
@@ -129,4 +138,7 @@ public class Project {
         return createdBy;
     }
 
+    public Long getVersion() {
+        return version;
+    }
 }
