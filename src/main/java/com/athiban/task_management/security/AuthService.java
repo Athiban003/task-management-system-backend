@@ -17,8 +17,8 @@ public class AuthService {
     public User getCurrentUser(){
         Authentication auth= SecurityContextHolder.getContext().getAuthentication();
 
-        String userId=auth.getName();
-        return  userRepository.findById(Long.parseLong(userId))
+        String email=auth.getName();
+        return  userRepository.findByEmail(email)
                 .orElseThrow(()->new IllegalStateException("Authenticated user not found"));
     }
 }
