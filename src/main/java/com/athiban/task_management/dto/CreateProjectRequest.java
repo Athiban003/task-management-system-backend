@@ -1,6 +1,6 @@
 package com.athiban.task_management.dto;
 
-import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,7 +18,7 @@ public class CreateProjectRequest {
     private String description;
 
     @NotNull(message="Deadline is required")
-    @Future(message="Deadline must be a future date")
+    @FutureOrPresent(message="Deadline must be a today or a future date")
     private LocalDate deadline;
 
     public String getName() {

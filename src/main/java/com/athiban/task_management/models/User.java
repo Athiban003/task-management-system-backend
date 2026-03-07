@@ -1,7 +1,6 @@
 package com.athiban.task_management.models;
 
 import jakarta.persistence.*;
-import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
 @Table(name = "users")

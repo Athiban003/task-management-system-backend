@@ -8,7 +8,7 @@ import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.AuditLogRepository;
 import com.athiban.task_management.repository.ProjectRepository;
-import com.athiban.task_management.security.AuthService;
+import com.athiban.task_management.service.AuthService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
