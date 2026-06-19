@@ -125,7 +125,7 @@ public class GlobalExceptionHandler {
         problem.setTitle("Internal Server Error");
         problem.setType(URI.create("https://api.taskmanagement.com/errors/internal"));
         problem.setProperty("timestamp", Instant.now());
-        log.error("Unexpected error: "+ex.getMessage());
+        log.error("Unexpected error: ",ex);
         return problem;
     }
 }

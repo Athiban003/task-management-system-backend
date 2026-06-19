@@ -40,4 +40,13 @@ public class AuditLog {
         this.details=details;
         this.performedAt=LocalDateTime.now();
     }
+
+    public AuditAction getAction() {
+        return action;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
 }
