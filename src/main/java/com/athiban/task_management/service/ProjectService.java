@@ -7,6 +7,7 @@ import com.athiban.task_management.exception.ProjectNotFoundException;
 import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.AuditLogRepository;
+import com.athiban.task_management.repository.ProjectMemberRepository;
 import com.athiban.task_management.repository.ProjectRepository;
 import com.athiban.task_management.security.AuthorizationService;
 import jakarta.transaction.Transactional;
@@ -20,13 +21,15 @@ public class ProjectService {
     private final AuthService authService;
     private final AuthorizationService authorizationService;
     private final AuditLogRepository auditLogRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
     public ProjectService(ProjectRepository projectRepository, AuthService authService,AuditLogRepository auditLogRepository,
-                          AuthorizationService authorizationService){
+                          AuthorizationService authorizationService, ProjectMemberRepository projectMemberRepository){
         this.projectRepository = projectRepository;
         this.authService= authService;
         this.auditLogRepository=auditLogRepository;
         this.authorizationService=authorizationService;
+        this.projectMemberRepository=projectMemberRepository;
     }
 
     @Transactional
@@ -36,6 +39,13 @@ public class ProjectService {
 
         Project project=new Project(creator, request.getName(),request.getDescription(),request.getDeadline());
         projectRepository.save(project);
+
+        ProjectMember ownerMembership = new ProjectMember(
+                project,
+                creator,
+                ProjectMemberRole.OWNER
+        );
+        projectMemberRepository.save(ownerMembership);
 
         auditLogRepository.save(
                 new AuditLog(
