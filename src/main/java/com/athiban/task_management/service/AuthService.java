@@ -7,11 +7,7 @@ import com.athiban.task_management.dto.RegisterRequest;
 import com.athiban.task_management.exception.AuthenticationException;
 import com.athiban.task_management.exception.EmailAlreadyExistsException;
 import com.athiban.task_management.exception.TokenExpiredException;
-import com.athiban.task_management.exception.UnauthorizedActionException;
-import com.athiban.task_management.models.Project;
-import com.athiban.task_management.models.RefreshToken;
-import com.athiban.task_management.models.Role;
-import com.athiban.task_management.models.User;
+import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.RefreshTokenRepository;
 import com.athiban.task_management.repository.UserRepository;
 import com.athiban.task_management.security.JwtUtil;
@@ -32,7 +28,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public  AuthService(UserRepository userRepository ,PasswordEncoder passwordEncoder,
+    public  AuthService(UserRepository userRepository , PasswordEncoder passwordEncoder,
                         JwtUtil jwtUtil, RefreshTokenRepository refreshTokenRepository){
         this.userRepository=userRepository;
         this.passwordEncoder=passwordEncoder;
@@ -124,46 +120,5 @@ public class AuthService {
 
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
-    }
-
-    public void checkCanCreateProject(User user){
-        if(user.getRole()!=Role.ADMIN && user.getRole()!=Role.MANAGER){
-            throw new UnauthorizedActionException("Only managers and administrators can create projects");
-        }
-    }
-
-    public void checkCanModifyProject(User currentUser, Project project){
-        boolean isAdmin=currentUser.getRole()==Role.ADMIN;
-        boolean isOwner=project.getCreatedBy().getId().equals(currentUser.getId());
-        if (!(isAdmin || isOwner)) {
-            throw new UnauthorizedActionException(
-                    "You are not authorized to modify this project"
-            );
-        }
-    }
-
-    public void checkCanDeleteProject(User currentUser, Project project) {
-        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
-        boolean isOwner = project.getCreatedBy().getId().equals(currentUser.getId());
-
-        if (!(isAdmin || isOwner)) {
-            throw new UnauthorizedActionException(
-                    "You are not authorized to delete this project"
-            );
-        }
-    }
-
-    public void checkCanViewProject(User currentUser, Project project){
-        boolean isAdmin=currentUser.getRole()==Role.ADMIN;
-        boolean isOwner=project.getCreatedBy().getId().equals(currentUser.getId());
-
-        if(!(isAdmin || isOwner)){
-            throw new UnauthorizedActionException("You are not authorized to view this project");
-        }
-    }
-
-    public boolean isAdminOverride(User currentUser,Project project){
-        return currentUser.getRole()==Role.ADMIN
-                && !project.getCreatedBy().getId().equals(currentUser.getId());
     }
 }

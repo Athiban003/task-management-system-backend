@@ -8,6 +8,7 @@ import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.AuditLogRepository;
 import com.athiban.task_management.repository.ProjectRepository;
+import com.athiban.task_management.security.AuthorizationService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -17,21 +18,25 @@ import java.util.List;
 public class ProjectService {
     private final ProjectRepository projectRepository;
     private final AuthService authService;
+    private final AuthorizationService authorizationService;
     private final AuditLogRepository auditLogRepository;
 
-    public ProjectService(ProjectRepository projectRepository, AuthService authService,AuditLogRepository auditLogRepository){
+    public ProjectService(ProjectRepository projectRepository, AuthService authService,AuditLogRepository auditLogRepository,
+                          AuthorizationService authorizationService){
         this.projectRepository = projectRepository;
         this.authService= authService;
         this.auditLogRepository=auditLogRepository;
+        this.authorizationService=authorizationService;
     }
 
     @Transactional
     public void createProject(CreateProjectRequest request){
         User creator = authService.getCurrentUser();
-        authService.checkCanCreateProject(creator);
+        authorizationService.checkCanCreateProject(creator);
 
         Project project=new Project(creator, request.getName(),request.getDescription(),request.getDeadline());
         projectRepository.save(project);
+
         auditLogRepository.save(
                 new AuditLog(
                         AuditAction.PROJECT_CREATED,
@@ -49,7 +54,7 @@ public class ProjectService {
                 .orElseThrow(()->new ProjectNotFoundException(("Project not found")));
 
         User currentUser=authService.getCurrentUser();
-        authService.checkCanModifyProject(currentUser,project);
+        authorizationService.checkCanModifyProject(currentUser,project);
 
         List<String> changes = project.updateDetails(
                 request.getName(),
@@ -61,7 +66,7 @@ public class ProjectService {
             projectRepository.save(project);
             String details=String.join(", ",changes);
 
-            if(authService.isAdminOverride(currentUser,project)){
+            if(authorizationService.isAdminOverride(currentUser,project)){
                 details="[ADMIN OVERRIDE] "+details;
             }
             auditLogRepository.save(new AuditLog(
@@ -80,7 +85,7 @@ public class ProjectService {
                 .orElseThrow(()->new ProjectNotFoundException(("Project not found")));
 
         User currentUser=authService.getCurrentUser();
-        authService.checkCanModifyProject(currentUser,project);
+        authorizationService.checkCanModifyProject(currentUser,project);
 
         if(!project.getCreatedBy().getId().equals(currentUser.getId())){
             throw new UnauthorizedActionException("You are not allowed to update the project");
@@ -93,7 +98,7 @@ public class ProjectService {
             projectRepository.save(project);
             String details = "status: " +oldStatus+"->"+ project.getStatus();
 
-            if(authService.isAdminOverride(currentUser,project)){
+            if(authorizationService.isAdminOverride(currentUser,project)){
                 details="[ADMIN OVERRIDE] "+details;
             }
             auditLogRepository.save(new AuditLog(
@@ -105,5 +110,4 @@ public class ProjectService {
             ));
         }
     }
-
 }
