@@ -6,6 +6,7 @@ import com.athiban.task_management.dto.UpdateProjectRequest;
 import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.AuditLogRepository;
+import com.athiban.task_management.repository.ProjectMemberRepository;
 import com.athiban.task_management.repository.ProjectRepository;
 import com.athiban.task_management.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,11 +31,14 @@ public class ProjectServiceIntegrationTest extends AbstractIntegrationTest {
     private UserRepository userRepository;
     @Autowired
     private AuditLogRepository auditLogRepository;
+    @Autowired
+    private ProjectMemberRepository projectMemberRepository;
 
     private User testUser;
 
     @BeforeEach
     void setup(){
+        projectMemberRepository.deleteAll();
         projectRepository.deleteAll();
         userRepository.deleteAll();
         auditLogRepository.deleteAll();
@@ -120,6 +124,14 @@ public class ProjectServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(savedProject.getDescription()).isEqualTo("Testing with real database");
         assertThat(savedProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
         assertThat(savedProject.getCreatedBy().getId()).isEqualTo(testUser.getId());
+
+        // Assert creator is added as OWNER member
+        List<ProjectMember> members = projectMemberRepository.findByProject(savedProject);
+        assertThat(members).hasSize(1);
+
+        ProjectMember ownerMember = members.getFirst();
+        assertThat(ownerMember.getUser().getId()).isEqualTo(testUser.getId());
+        assertThat(ownerMember.getRole()).isEqualTo(ProjectMemberRole.OWNER);
     }
 
     @Test
@@ -227,6 +239,55 @@ public class ProjectServiceIntegrationTest extends AbstractIntegrationTest {
 
         // Should contain [ADMIN OVERRIDE] prefix
         assertThat(updateLog.getDetails()).startsWith("[ADMIN OVERRIDE]");
+    }
+
+    @Test
+    void whenUserAddedAsEditor_canModifyProject() {
+        // Create project by testUser
+        CreateProjectRequest createRequest = new CreateProjectRequest();
+        createRequest.setName("Shared Project");
+        createRequest.setDescription("Testing shared access");
+        createRequest.setDeadline(LocalDate.now().plusDays(30));
+        projectService.createProject(createRequest);
+
+        Project project = projectRepository.findAll().getFirst();
+
+        // Create another manager
+        User anotherManager = new User();
+        anotherManager.setName("Another Manager");
+        anotherManager.setEmail("another2@test.com");
+        anotherManager.setPassword("password");
+        anotherManager.setRole(Role.MANAGER);
+        anotherManager = userRepository.save(anotherManager);
+
+        // Add as EDITOR
+        ProjectMember member = new ProjectMember(
+                project,
+                anotherManager,
+                ProjectMemberRole.EDITOR
+        );
+        projectMemberRepository.save(member);
+
+        // Authenticate as anotherManager
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        anotherManager.getEmail(),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_MANAGER"))
+                )
+        );
+
+        // Try to update (should work now)
+        UpdateProjectRequest updateRequest = new UpdateProjectRequest();
+        updateRequest.setName("Updated by Editor");
+        updateRequest.setDescription("Should work");
+        updateRequest.setDeadline(LocalDate.now().plusDays(60));
+
+        projectService.updateProject(project.getId(), updateRequest);
+
+        // Assert
+        Project updated = projectRepository.findById(project.getId()).get();
+        assertThat(updated.getName()).isEqualTo("Updated by Editor");
     }
 }
 
