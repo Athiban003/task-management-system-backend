@@ -4,7 +4,6 @@ import com.athiban.task_management.dto.CreateProjectRequest;
 import com.athiban.task_management.dto.UpdateProjectRequest;
 import com.athiban.task_management.dto.UpdateProjectStatusRequest;
 import com.athiban.task_management.exception.ProjectNotFoundException;
-import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.AuditLogRepository;
 import com.athiban.task_management.repository.ProjectMemberRepository;
@@ -95,11 +94,10 @@ public class ProjectService {
                 .orElseThrow(()->new ProjectNotFoundException(("Project not found")));
 
         User currentUser=authService.getCurrentUser();
-        authorizationService.checkCanModifyProject(currentUser,project);
-
-        if(!project.getCreatedBy().getId().equals(currentUser.getId())){
-            throw new UnauthorizedActionException("You are not allowed to update the project");
-        }
+        authorizationService.checkCanUpdateStatus(
+                currentUser,
+                project
+        );
 
         ProjectStatus oldStatus=project.getStatus();
         boolean changed= project.changeStatus(request.getStatus());

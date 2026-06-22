@@ -36,6 +36,26 @@ public class AuthorizationService {
         }
     }
 
+    public void checkCanUpdateStatus(User currentUser, Project project){
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        boolean isOwner =
+                project.getCreatedBy().getId().equals(currentUser.getId());
+
+        boolean isEditor =
+                projectMemberRepository.existsByProjectAndUserAndRole(
+                        project,
+                        currentUser,
+                        ProjectMemberRole.EDITOR
+                );
+
+        if(!(isAdmin || isOwner || isEditor)){
+            throw new UnauthorizedActionException(
+                    "You are not authorized to update project status"
+            );
+        }
+    }
+
     public void checkCanDeleteProject(User currentUser, Project project) {
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
         boolean isOwner = project.getCreatedBy().getId().equals(currentUser.getId());
