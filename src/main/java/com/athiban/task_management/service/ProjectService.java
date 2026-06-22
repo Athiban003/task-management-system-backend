@@ -118,4 +118,38 @@ public class ProjectService {
             ));
         }
     }
+
+    @Transactional
+    public void deleteProject(Long projectId){
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() ->
+                        new ProjectNotFoundException("Project not found"));
+
+        User currentUser = authService.getCurrentUser();
+
+        authorizationService.checkCanDeleteProject(
+                currentUser,
+                project
+        );
+
+        String details = "Project deleted";
+
+        if (authorizationService.isAdminOverride(currentUser, project)) {
+            details = "[ADMIN OVERRIDE] " + details;
+        }
+
+        auditLogRepository.save(
+                new AuditLog(
+                        AuditAction.PROJECT_DELETED,
+                        project.getId(),
+                        "PROJECT",
+                        currentUser.getId(),
+                        details
+                )
+        );
+
+        projectMemberRepository.deleteByProject(project);
+        projectRepository.delete(project);
+    }
 }
