@@ -1,10 +1,7 @@
 package com.athiban.task_management.security;
 
 import com.athiban.task_management.exception.UnauthorizedActionException;
-import com.athiban.task_management.models.Project;
-import com.athiban.task_management.models.ProjectMemberRole;
-import com.athiban.task_management.models.Role;
-import com.athiban.task_management.models.User;
+import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.ProjectMemberRepository;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +20,11 @@ public class AuthorizationService {
 
     public void checkCanModifyProject(User currentUser, Project project){
         boolean isAdmin=currentUser.getRole()== Role.ADMIN;
-        boolean isOwner=project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
         boolean isEditor = projectMemberRepository.existsByProjectAndUserAndRole(
                 project,
                 currentUser,
@@ -39,8 +40,11 @@ public class AuthorizationService {
     public void checkCanUpdateStatus(User currentUser, Project project){
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
 
-        boolean isOwner =
-                project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
 
         boolean isEditor =
                 projectMemberRepository.existsByProjectAndUserAndRole(
@@ -58,8 +62,11 @@ public class AuthorizationService {
 
     public void checkCanDeleteProject(User currentUser, Project project) {
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
-        boolean isOwner = project.getCreatedBy().getId().equals(currentUser.getId());
-
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
         if (!(isAdmin || isOwner)) {
             throw new UnauthorizedActionException(
                     "You are not authorized to delete this project"
@@ -69,7 +76,11 @@ public class AuthorizationService {
 
     public void checkCanViewProject(User currentUser, Project project){
         boolean isAdmin=currentUser.getRole()==Role.ADMIN;
-        boolean isOwner=project.getCreatedBy().getId().equals(currentUser.getId());
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
         boolean isMember = projectMemberRepository.existsByProjectAndUser(project, currentUser);
 
         if(!(isAdmin || isOwner || isMember)){
@@ -79,8 +90,11 @@ public class AuthorizationService {
 
     public void checkCanManageMembers(User currentUser, Project project) {
         boolean isAdmin = currentUser.getRole() == Role.ADMIN;
-        boolean isOwner = project.getCreatedBy().getId().equals(currentUser.getId());
-
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
         if (!(isAdmin || isOwner)) {
             throw new UnauthorizedActionException(
                     "Only project owner and administrators can manage members"
@@ -88,8 +102,92 @@ public class AuthorizationService {
         }
     }
 
+    public void checkCanCreateTask(User currentUser, Project project) {
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                        project,
+                        currentUser,
+                        ProjectMemberRole.OWNER
+                );
+
+        boolean isEditor = projectMemberRepository.existsByProjectAndUserAndRole(
+                        project,
+                        currentUser,
+                        ProjectMemberRole.EDITOR
+                );
+
+        if (!(isAdmin || isOwner || isEditor)) {
+            throw new UnauthorizedActionException(
+                    "You are not authorized to create tasks in this project"
+            );
+        }
+    }
+
+    public void checkCanModifyTask(User currentUser, Task task) {
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                task.getProject(),
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
+
+        boolean isEditor = projectMemberRepository.existsByProjectAndUserAndRole(
+                                task.getProject(),
+                                currentUser,
+                                ProjectMemberRole.EDITOR
+                        );
+
+        if (!(isAdmin || isOwner || isEditor)) {
+            throw new UnauthorizedActionException(
+                    "You are not authorized to modify this task"
+            );
+        }
+    }
+
+    public void checkCanUpdateTaskStatus(User currentUser, Task task) {
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                task.getProject(),
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
+
+        boolean isAssignee = task.getAssignedTo() != null
+                && task.getAssignedTo().getId().equals(currentUser.getId());
+
+        if (!(isAdmin || isOwner || isAssignee)) {
+            throw new UnauthorizedActionException(
+                    "You are not authorized to update task status"
+            );
+        }
+    }
+
+    public void checkCanDeleteTask(User currentUser, Task task) {
+
+        boolean isAdmin = currentUser.getRole() == Role.ADMIN;
+
+        boolean isOwner = projectMemberRepository.existsByProjectAndUserAndRole(
+                task.getProject(),
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
+
+        if (!(isAdmin || isOwner)) {
+            throw new UnauthorizedActionException(
+                    "You are not authorized to delete this task"
+            );
+        }
+    }
+
     public boolean isAdminOverride(User currentUser,Project project){
         return currentUser.getRole()==Role.ADMIN
-                && !project.getCreatedBy().getId().equals(currentUser.getId());
+                && !projectMemberRepository.existsByProjectAndUserAndRole(
+                project,
+                currentUser,
+                ProjectMemberRole.OWNER
+        );
     }
 }
