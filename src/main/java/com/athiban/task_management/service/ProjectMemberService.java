@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.AddMemberRequest;
 import com.athiban.task_management.exception.ProjectNotFoundException;
 import com.athiban.task_management.models.*;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProjectMemberService {
+    private static final Logger logger = LoggerFactory.getLogger(ProjectMemberService.class);
 
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectRepository projectRepository;
@@ -33,6 +36,11 @@ public class ProjectMemberService {
 
     @Transactional
     public void addMember(Long projectId, AddMemberRequest request) {
+        logger.info(
+                "Adding user {} to project {}",
+                request.getUserId(),
+                projectId
+        );
         // Load project
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
@@ -57,10 +65,21 @@ public class ProjectMemberService {
                 request.getRole()
         );
         projectMemberRepository.save(member);
+        logger.info(
+                "User {} added to project {} as {}",
+                userToAdd.getId(),
+                project.getId(),
+                request.getRole()
+        );
     }
 
     @Transactional
     public void removeMember(Long projectId, Long userId) {
+        logger.info(
+                "Removing user {} from project {}",
+                userId,
+                projectId
+        );
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
 
@@ -74,10 +93,20 @@ public class ProjectMemberService {
                 .orElseThrow(() -> new IllegalArgumentException("User is not a member of this project"));
 
         projectMemberRepository.delete(member);
+        logger.info(
+                "User {} removed from project {}",
+                userId,
+                projectId
+        );
     }
 
     @Transactional
     public void updateMemberRole(Long projectId, Long userId, ProjectMemberRole newRole) {
+        logger.info(
+                "Updating role for user {} in project {}",
+                userId,
+                projectId
+        );
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
 
@@ -90,7 +119,14 @@ public class ProjectMemberService {
         ProjectMember member = projectMemberRepository.findByProjectAndUser(project, user)
                 .orElseThrow(() -> new IllegalArgumentException("User is not a member of this project"));
 
+        ProjectMemberRole oldRole = member.getRole();
         member.setRole(newRole);
         projectMemberRepository.save(member);
+        logger.info(
+                "Role changed for user {} from {} to {}",
+                userId,
+                oldRole,
+                newRole
+        );
     }
 }

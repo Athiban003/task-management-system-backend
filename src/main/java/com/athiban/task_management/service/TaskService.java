@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.CreateTaskRequest;
 import com.athiban.task_management.dto.UpdateTaskRequest;
 import com.athiban.task_management.dto.UpdateTaskStatusRequest;
@@ -15,6 +17,7 @@ import java.util.List;
 
 @Service
 public class TaskService {
+    private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
 
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
@@ -42,6 +45,8 @@ public class TaskService {
 
     @Transactional
     public void createTask(Long projectId, CreateTaskRequest request) {
+        logger.info("Creating task: {} in project: {}", request.getTitle(), projectId);
+
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
 
@@ -70,10 +75,13 @@ public class TaskService {
                         "Task created: " + task.getTitle()
                 )
         );
+        logger.info("Task {} created successfully", task.getId());
     }
 
     @Transactional
     public void updateTask(Long taskId, UpdateTaskRequest request) {
+        logger.info("Updating task: {}", taskId);
+
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
 
@@ -104,10 +112,13 @@ public class TaskService {
                     )
             );
         }
+        logger.info("Task {} updated successfully", task.getId());
     }
 
     @Transactional
     public void updateTaskStatus(Long taskId, UpdateTaskStatusRequest request) {
+        logger.info("Updating task status: {}", taskId);
+
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
 
@@ -130,10 +141,13 @@ public class TaskService {
                     )
             );
         }
+        logger.info("Status of Task {} updated successfully", task.getId());
     }
 
     @Transactional
     public void assignTask(Long taskId, Long userId) {
+        logger.info("Assigning task: {} to user: {}", taskId, userId);
+
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new EntityNotFoundException("Task not found"));
 
@@ -162,11 +176,12 @@ public class TaskService {
                         detail
                 )
         );
+        logger.info("Task {} assigned successfully", task.getId());
     }
 
     @Transactional
     public void deleteTask(Long taskId) {
-
+        logger.info("Deleting task: {}", taskId);
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Task not found"));
@@ -189,5 +204,6 @@ public class TaskService {
         );
 
         taskRepository.delete(task);
+        logger.info("Task {} deleted successfully", task.getId());
     }
 }

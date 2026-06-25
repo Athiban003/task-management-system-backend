@@ -2,6 +2,7 @@ package com.athiban.task_management.exception;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -18,84 +19,93 @@ import java.util.Map;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    private ProblemDetail createProblemDetail(HttpStatus status, String detail,
+                                              String title, String type) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        problem.setType(URI.create(type));
+        problem.setProperty("timestamp", Instant.now());
+
+        String correlationId = MDC.get("correlationId");
+        if (correlationId != null) {
+            problem.setProperty("correlationId", correlationId);
+        }
+
+        return problem;
+    }
+
     @ExceptionHandler(UnauthorizedActionException.class)
     public ProblemDetail handleUnauthorized(UnauthorizedActionException ex){
-        ProblemDetail problem=ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,ex.getMessage());
-        problem.setTitle("Access Denied");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/forbidden"));
-        problem.setProperty("timestamp", Instant.now());
-        return problem;
+        return createProblemDetail(
+                HttpStatus.FORBIDDEN,
+                ex.getMessage(),
+                "Access Denied",
+                "https://api.taskmanagement.com/errors/forbidden"
+        );
     }
 
     @ExceptionHandler(ProjectNotFoundException.class)
     public ProblemDetail handleProjectNotFound(ProjectNotFoundException ex){
-        ProblemDetail problem=ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND,ex.getMessage());
-        problem.setTitle("Project not found");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/not-found"));
-        problem.setProperty("timestamp",Instant.now());
-        return problem;
+        return createProblemDetail(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage(),
+                "Project Not Found",
+                "https://api.taskmanagement.com/errors/not-found"
+        );
     }
 
     @ExceptionHandler(InvalidProjectStateException.class)
     public ProblemDetail handleInvalidProjectState(InvalidProjectStateException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        return createProblemDetail(
                 HttpStatus.CONFLICT,
-                ex.getMessage()
+                ex.getMessage(),
+                "Invalid State Transition",
+                "https://api.taskmanagement.com/errors/invalid-state"
         );
-        problem.setTitle("Invalid State Transition");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/invalid-state"));
-        problem.setProperty("timestamp", Instant.now());
-        return problem;
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ProblemDetail handleOptimisticLock(){
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        ProblemDetail problem= createProblemDetail(
                 HttpStatus.CONFLICT,
-                "The resource was modified by another request. Please reload and try again."
+                "The resource was modified by another request. Please reload and try again.",
+                "Concurrent Modification Detected",
+                "https://api.taskmanagement.com/errors/optimistic-lock"
         );
-        problem.setTitle("Concurrent Modification Detected");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/optimistic-lock"));
-        problem.setProperty("timestamp", Instant.now());
         problem.setProperty("retryable", true);
         return problem;
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ProblemDetail handleAuthentication(AuthenticationException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        return createProblemDetail(
                 HttpStatus.UNAUTHORIZED,
-                ex.getMessage()
+                ex.getMessage(),
+                "Authentication Failed",
+                "https://api.taskmanagement.com/errors/authentication"
         );
-        problem.setTitle("Authentication Failed");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/authentication"));
-        problem.setProperty("timestamp", Instant.now());
-        return problem;
     }
 
     @ExceptionHandler(TokenExpiredException.class)
     public ProblemDetail handleTokenExpired(TokenExpiredException ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        ProblemDetail problem = createProblemDetail(
                 HttpStatus.UNAUTHORIZED,
-                ex.getMessage()
+                ex.getMessage(),
+                "Token Expired",
+                "https://api.taskmanagement.com/errors/token-expired"
         );
-        problem.setTitle("Token Expired");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/token-expired"));
-        problem.setProperty("timestamp", Instant.now());
         problem.setProperty("retryable", false);
         return problem;
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ProblemDetail handleEmailExists(EmailAlreadyExistsException ex){
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        return createProblemDetail(
                 HttpStatus.CONFLICT,
-                ex.getMessage()
+                ex.getMessage(),
+                "Email Already Exists",
+                "https://api.taskmanagement.com/errors/email-exists"
         );
-        problem.setTitle("Email Already Exists");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/email-exists"));
-        problem.setProperty("timestamp", Instant.now());
-        return problem;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -105,26 +115,24 @@ public class GlobalExceptionHandler {
                 errors.put(error.getField(), error.getDefaultMessage())
         );
 
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        ProblemDetail problem = createProblemDetail(
                 HttpStatus.BAD_REQUEST,
-                "Validation failed for one or more fields"
+                "Validation failed for one or more fields",
+                "Validation Error",
+                "https://api.taskmanagement.com/errors/validation"
         );
-        problem.setTitle("Validation Error");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/validation"));
-        problem.setProperty("timestamp", Instant.now());
         problem.setProperty("errors", errors);
         return problem;
     }
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneric(Exception ex) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+        ProblemDetail problem = createProblemDetail(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred. Please try again later."
+                "An unexpected error occurred. Please try again later.",
+                "Internal Server Error",
+                "https://api.taskmanagement.com/errors/internal"
         );
-        problem.setTitle("Internal Server Error");
-        problem.setType(URI.create("https://api.taskmanagement.com/errors/internal"));
-        problem.setProperty("timestamp", Instant.now());
         log.error("Unexpected error: ",ex);
         return problem;
     }

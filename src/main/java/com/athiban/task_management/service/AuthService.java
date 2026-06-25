@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.LoginRequest;
 import com.athiban.task_management.dto.LoginResponse;
 import com.athiban.task_management.dto.RefreshTokenRequest;
@@ -23,6 +25,7 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private final UserRepository userRepository;
     private  final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -47,6 +50,7 @@ public class AuthService {
     }
 
     public void register(RegisterRequest request){
+        logger.info("Registering user {}", request.getEmail());
         if(userRepository.findByEmail(request.getEmail()).isPresent()){
             throw new EmailAlreadyExistsException("Email already registered");
         }
@@ -58,13 +62,18 @@ public class AuthService {
         user.setRole(Role.MEMBER);
 
         userRepository.save(user);
+        logger.info("User registered successfully {}", user.getId());
     }
 
     public LoginResponse login(LoginRequest request){
+        logger.info("Login attempt for {}", request.getEmail());
+
         User user=userRepository.findByEmail(request.getEmail())
                 .orElseThrow(()-> new AuthenticationException("Invalid email or password"));
 
         if(!passwordEncoder.matches(request.getPassword(),user.getPassword())){
+            logger.warn("Failed login attempt for {}", request.getEmail());
+
             throw new AuthenticationException("Invalid email or password");
         }
 
@@ -82,6 +91,7 @@ public class AuthService {
         );
 
         refreshTokenRepository.save(refreshToken);
+        logger.info("Login successful for user {}", user.getId());
         return new LoginResponse(accessToken,refreshTokenValue);
     }
 
@@ -90,12 +100,25 @@ public class AuthService {
         RefreshToken refreshToken=refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(()->new AuthenticationException("Invalid refresh token"));
 
+        logger.info(
+                "Refreshing access token for user {}",
+                refreshToken.getUser().getId()
+        );
+
         if(refreshToken.isRevoked()){
             refreshTokenRepository.deleteByUser(refreshToken.getUser());
+            logger.warn(
+                    "Revoked refresh token used by user {}",
+                    refreshToken.getUser().getId()
+            );
             throw new AuthenticationException("Refresh token has been revoked");
         }
 
         if(refreshToken.getExpiresAt().isBefore(LocalDateTime.now())){
+            logger.warn(
+                    "Expired refresh token used by user {}",
+                    refreshToken.getUser().getId()
+            );
             throw new TokenExpiredException("Refresh token expired");
         }
 
@@ -111,14 +134,22 @@ public class AuthService {
                 LocalDateTime.now().plusDays(7)
         );
         refreshTokenRepository.save(newRefreshToken);
+        logger.info("Refresh token generated for user {}", user.getId());
+
         return new LoginResponse(newAccessToken,newRefreshTokenValue);
     }
 
     public void logout(RefreshTokenRequest request){
+        logger.info("Logout request received");
+
         RefreshToken refreshToken=refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(()->new AuthenticationException("Invalid refresh token"));
 
         refreshToken.setRevoked(true);
         refreshTokenRepository.save(refreshToken);
+        logger.info(
+                "User {} logged out successfully",
+                refreshToken.getUser().getId()
+        );
     }
 }

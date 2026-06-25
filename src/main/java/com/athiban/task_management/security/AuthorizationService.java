@@ -1,5 +1,7 @@
 package com.athiban.task_management.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.athiban.task_management.exception.UnauthorizedActionException;
 import com.athiban.task_management.models.*;
 import com.athiban.task_management.repository.ProjectMemberRepository;
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthorizationService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthorizationService.class);
     private final ProjectMemberRepository projectMemberRepository;
 
     public  AuthorizationService(ProjectMemberRepository projectMemberRepository){
@@ -14,6 +17,10 @@ public class AuthorizationService {
     }
     public void checkCanCreateProject(User user){
         if(user.getRole()!=Role.ADMIN && user.getRole()!=Role.MANAGER){
+            logger.warn(
+                    "Unauthorized project creation. userId={}",
+                    user.getId()
+            );
             throw new UnauthorizedActionException("Only managers and administrators can create projects");
         }
     }
@@ -31,6 +38,11 @@ public class AuthorizationService {
                 ProjectMemberRole.EDITOR
         );
         if (!(isAdmin || isOwner || isEditor)) {
+            logger.warn(
+                    "Unauthorized project modification. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to modify this project"
             );
@@ -54,6 +66,11 @@ public class AuthorizationService {
                 );
 
         if(!(isAdmin || isOwner || isEditor)){
+            logger.warn(
+                    "Unauthorized project status modification. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to update project status"
             );
@@ -68,6 +85,11 @@ public class AuthorizationService {
                 ProjectMemberRole.OWNER
         );
         if (!(isAdmin || isOwner)) {
+            logger.warn(
+                    "Unauthorized project deletion. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to delete this project"
             );
@@ -84,6 +106,11 @@ public class AuthorizationService {
         boolean isMember = projectMemberRepository.existsByProjectAndUser(project, currentUser);
 
         if(!(isAdmin || isOwner || isMember)){
+            logger.warn(
+                    "Unauthorized project viewing. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException("You are not authorized to view this project");
         }
     }
@@ -96,6 +123,11 @@ public class AuthorizationService {
                 ProjectMemberRole.OWNER
         );
         if (!(isAdmin || isOwner)) {
+            logger.warn(
+                    "Unauthorized managing members in project. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException(
                     "Only project owner and administrators can manage members"
             );
@@ -118,6 +150,11 @@ public class AuthorizationService {
                 );
 
         if (!(isAdmin || isOwner || isEditor)) {
+            logger.warn(
+                    "Unauthorized task creation. userId={}, projectId={}",
+                    currentUser.getId(),
+                    project.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to create tasks in this project"
             );
@@ -140,6 +177,11 @@ public class AuthorizationService {
                         );
 
         if (!(isAdmin || isOwner || isEditor)) {
+            logger.warn(
+                    "Unauthorized task modification. userId={}, taskId={}",
+                    currentUser.getId(),
+                    task.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to modify this task"
             );
@@ -159,6 +201,11 @@ public class AuthorizationService {
                 && task.getAssignedTo().getId().equals(currentUser.getId());
 
         if (!(isAdmin || isOwner || isAssignee)) {
+            logger.warn(
+                    "Unauthorized task status modification. userId={}, taskId={}",
+                    currentUser.getId(),
+                    task.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to update task status"
             );
@@ -176,6 +223,11 @@ public class AuthorizationService {
         );
 
         if (!(isAdmin || isOwner)) {
+            logger.warn(
+                    "Unauthorized task deletion. userId={}, taskId={}",
+                    currentUser.getId(),
+                    task.getId()
+            );
             throw new UnauthorizedActionException(
                     "You are not authorized to delete this task"
             );

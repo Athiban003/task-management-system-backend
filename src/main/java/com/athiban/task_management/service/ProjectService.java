@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.CreateProjectRequest;
 import com.athiban.task_management.dto.UpdateProjectRequest;
 import com.athiban.task_management.dto.UpdateProjectStatusRequest;
@@ -16,6 +18,8 @@ import java.util.List;
 
 @Service
 public class ProjectService {
+    private static final Logger logger = LoggerFactory.getLogger(ProjectService.class);
+
     private final ProjectRepository projectRepository;
     private final AuthService authService;
     private final AuthorizationService authorizationService;
@@ -34,6 +38,8 @@ public class ProjectService {
     @Transactional
     public void createProject(CreateProjectRequest request){
         User creator = authService.getCurrentUser();
+        logger.info("Creating project: {} for user: {}", request.getName(), creator.getEmail());
+
         authorizationService.checkCanCreateProject(creator);
 
         Project project=new Project(creator, request.getName(),request.getDescription(),request.getDeadline());
@@ -55,10 +61,13 @@ public class ProjectService {
                         "Project created"
                 )
         );
+        logger.info("Project created successfully with ID: {}", project.getId());
     }
 
     @Transactional
     public void updateProject(Long projectId, UpdateProjectRequest request){
+        logger.info("Updating project: {}", projectId);
+
         Project project=projectRepository.findById(projectId)
                 .orElseThrow(()->new ProjectNotFoundException(("Project not found")));
 
@@ -86,10 +95,13 @@ public class ProjectService {
                     details
             ));
         }
+        logger.info("Project {} updated successfully", projectId);
     }
 
     @Transactional
     public  void updateProjectStatus(Long projectId, UpdateProjectStatusRequest request){
+        logger.info("Updating project status: {}", projectId);
+
         Project project =projectRepository.findById(projectId)
                 .orElseThrow(()->new ProjectNotFoundException(("Project not found")));
 
@@ -117,10 +129,12 @@ public class ProjectService {
                     details
             ));
         }
+        logger.info("Project status {} updated successfully", projectId);
     }
 
     @Transactional
     public void deleteProject(Long projectId){
+        logger.info("deleting project: {}", projectId);
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() ->
@@ -151,5 +165,6 @@ public class ProjectService {
 
         projectMemberRepository.deleteByProject(project);
         projectRepository.delete(project);
+        logger.info("Project {} deleted successfully", projectId);
     }
 }
