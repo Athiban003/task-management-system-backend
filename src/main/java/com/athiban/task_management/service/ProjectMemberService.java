@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import com.athiban.task_management.dto.ProjectMemberResponse;
+import com.athiban.task_management.mapper.ProjectMemberMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.AddMemberRequest;
@@ -9,6 +11,10 @@ import com.athiban.task_management.repository.ProjectMemberRepository;
 import com.athiban.task_management.repository.ProjectRepository;
 import com.athiban.task_management.repository.UserRepository;
 import com.athiban.task_management.security.AuthorizationService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +38,21 @@ public class ProjectMemberService {
         this.userRepository = userRepository;
         this.authService = authService;
         this.authorizationService = authorizationService;
+    }
+
+    public Page<ProjectMemberResponse> getMembers(Long projectId, int page, int size) {
+        User currentUser = authService.getCurrentUser();
+
+        Project project = projectRepository.findById(projectId)
+                        .orElseThrow(() -> new ProjectNotFoundException("Project not found"));
+
+        authorizationService.checkCanViewProject(currentUser, project);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("addedAt").descending());
+
+        Page<ProjectMember> members =projectMemberRepository.findByProject(project, pageable);
+
+        return members.map(ProjectMemberMapper::toResponse);
     }
 
     @Transactional

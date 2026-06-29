@@ -1,10 +1,12 @@
 package com.athiban.task_management.controller;
 
 import com.athiban.task_management.dto.CreateProjectRequest;
+import com.athiban.task_management.dto.ProjectResponse;
 import com.athiban.task_management.dto.UpdateProjectRequest;
 import com.athiban.task_management.dto.UpdateProjectStatusRequest;
 import com.athiban.task_management.service.ProjectService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,30 @@ public class ProjectController {
 
     public ProjectController(ProjectService projectService) {
         this.projectService = projectService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ProjectResponse>> getProjects(
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "20") int size
+    ) {
+
+        return ResponseEntity.ok(
+                projectService.getProjects(page, size)
+        );
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProjectResponse> getProject(
+
+            @PathVariable Long id
+    ) {
+
+        return ResponseEntity.ok(
+                projectService.getProjectById(id)
+        );
     }
 
     @PostMapping

@@ -1,5 +1,7 @@
 package com.athiban.task_management.service;
 
+import com.athiban.task_management.dto.ProjectResponse;
+import com.athiban.task_management.mapper.ProjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.athiban.task_management.dto.CreateProjectRequest;
@@ -12,6 +14,10 @@ import com.athiban.task_management.repository.ProjectMemberRepository;
 import com.athiban.task_management.repository.ProjectRepository;
 import com.athiban.task_management.security.AuthorizationService;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,6 +39,50 @@ public class ProjectService {
         this.auditLogRepository=auditLogRepository;
         this.authorizationService=authorizationService;
         this.projectMemberRepository=projectMemberRepository;
+    }
+
+    public Page<ProjectResponse> getProjects(
+            int page,
+            int size
+    ) {
+
+        User currentUser = authService.getCurrentUser();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("addedAt").descending()
+        );
+
+        Page<ProjectMember> memberships =
+                projectMemberRepository.findByUser(
+                        currentUser,
+                        pageable
+                );
+
+        return memberships.map(member ->
+                ProjectMapper.toResponse(
+                        member.getProject()
+                )
+        );
+    }
+
+    public ProjectResponse getProjectById(Long projectId) {
+        User currentUser = authService.getCurrentUser();
+
+        Project project =
+                projectRepository.findById(projectId)
+                        .orElseThrow(() ->
+                                new ProjectNotFoundException(
+                                        "Project not found"
+                                ));
+
+        authorizationService.checkCanViewProject(
+                currentUser,
+                project
+        );
+
+        return ProjectMapper.toResponse(project);
     }
 
     @Transactional

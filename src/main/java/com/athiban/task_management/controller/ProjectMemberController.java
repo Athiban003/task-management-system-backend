@@ -1,9 +1,11 @@
 package com.athiban.task_management.controller;
 
 import com.athiban.task_management.dto.AddMemberRequest;
+import com.athiban.task_management.dto.ProjectMemberResponse;
 import com.athiban.task_management.dto.UpdateMemberRoleRequest;
 import com.athiban.task_management.service.ProjectMemberService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,21 @@ public class ProjectMemberController {
 
     public ProjectMemberController(ProjectMemberService projectMemberService) {
         this.projectMemberService = projectMemberService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ProjectMemberResponse>> getMembers(
+            @PathVariable Long projectId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(
+                projectMemberService.getMembers(
+                        projectId,
+                        page,
+                        size
+                )
+        );
     }
 
     @PostMapping
